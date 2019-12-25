@@ -29,7 +29,8 @@ def main():
         choices=['debug', 'info', 'warning', 'fatal', 'error'],
         help='logger level',
     )
-    parser.add_argument('filename', nargs='?', help='image or label filename')
+    parser.add_argument('filename_date1', nargs='?', help='image or label filename')
+    parser.add_argument('filename_date2', nargs='?', help='image or label filename')
     parser.add_argument(
         '--output',
         '-O',
@@ -135,7 +136,8 @@ def main():
     config_from_args = args.__dict__
     config_from_args.pop('version')
     reset_config = config_from_args.pop('reset_config')
-    filename = config_from_args.pop('filename')
+    filename_date1 = config_from_args.pop('filename_date1')
+    filename_date2 = config_from_args.pop('filename_date2')
     output = config_from_args.pop('output')
     config_file = config_from_args.pop('config_file')
     config = get_config(config_from_args, config_file)
@@ -159,7 +161,8 @@ def main():
     app.setWindowIcon(newIcon('icon'))
     win = MainWindow(
         config=config,
-        filename=filename,
+        filename_date1=filename_date1,
+        filename_date2=filename_date2,
         output_file=output_file,
         output_dir=output_dir,
     )

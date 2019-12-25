@@ -48,7 +48,9 @@ class MainWindow(QtWidgets.QMainWindow):
     def __init__(
         self,
         config=None,
-        filename=None,
+        #filename=None,
+        filename_date1 = None, #date1
+        filename_date2 = None, #date2
         output=None,
         output_file=None,
         output_dir=None,
@@ -122,20 +124,20 @@ class MainWindow(QtWidgets.QMainWindow):
         self.fileSearch = QtWidgets.QLineEdit()
         self.fileSearch.setPlaceholderText('Search Filename')
         self.fileSearch.textChanged.connect(self.fileSearchChanged)
-        self.fileListWidget = QtWidgets.QListWidget()
-        self.fileListWidget.itemSelectionChanged.connect(
+        self.filePairListWidget = QtWidgets.QListWidget()
+        self.filePairListWidget.itemSelectionChanged.connect(
             self.fileSelectionChanged
         )
         fileListLayout = QtWidgets.QVBoxLayout()
         fileListLayout.setContentsMargins(0, 0, 0, 0)
         fileListLayout.setSpacing(0)
         fileListLayout.addWidget(self.fileSearch)
-        fileListLayout.addWidget(self.fileListWidget)
+        fileListLayout.addWidget(self.filePairListWidget)
         self.file_dock = QtWidgets.QDockWidget(u'File List', self)
         self.file_dock.setObjectName(u'Files')
-        fileListWidget = QtWidgets.QWidget()
-        fileListWidget.setLayout(fileListLayout)
-        self.file_dock.setWidget(fileListWidget)
+        filePairListWidget = QtWidgets.QWidget()
+        filePairListWidget.setLayout(fileListLayout)
+        self.file_dock.setWidget(filePairListWidget)
 
         self.zoomWidget = ZoomWidget()
         self.colorDialog = ColorDialog(parent=self)
@@ -183,21 +185,23 @@ class MainWindow(QtWidgets.QMainWindow):
         shortcuts = self._config['shortcuts']
         quit = action('&Quit', self.close, shortcuts['quit'], 'quit',
                       'Quit application')
-        open_ = action('&Open', self.openFile, shortcuts['open'], 'open',
-                       'Open image or label file')
+        # open_ = action('&Open', self.openFile, shortcuts['open'], 'open',
+        #                'Open image or label file')
+        openpair_ = action('&OpenPair', self.openPair, shortcuts['openpair'], 'open',
+                          'Open Image Pairs')
         opendir = action('&Open Dir', self.openDirDialog,
                          shortcuts['open_dir'], 'open', u'Open Dir')
-        openNextImg = action(
-            '&Next Image',
-            self.openNextImg,
+        openNextPair = action(
+            '&Next Pair',
+            self.openNextPair,
             shortcuts['open_next'],
             'next',
             u'Open next (hold Ctl+Shift to copy labels)',
             enabled=False,
         )
-        openPrevImg = action(
-            '&Prev Image',
-            self.openPrevImg,
+        openPrevPair = action(
+            '&Prev Pair',
+            self.openPrevPair,
             shortcuts['open_prev'],
             'prev',
             u'Open prev (hold Ctl+Shift to copy labels)',
@@ -251,6 +255,10 @@ class MainWindow(QtWidgets.QMainWindow):
             'Toggle "keep pevious annotation" mode',
             checkable=True)
         toggle_keep_prev_mode.setChecked(self._config['keep_prev'])
+
+        toggleDate = action('Toggle date pair images', self.toggleDatePair,
+                            shortcuts['toggle_date'], None, 'Toogle "date image" mode',
+                            checkable=True)
 
         createMode = action(
             'Create Polygons',
@@ -414,10 +422,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.actions = utils.struct(
             saveAuto=saveAuto,
             changeOutputDir=changeOutputDir,
-            save=save, saveAs=saveAs, open=open_, close=close,
+            save=save, saveAs=saveAs, openpair=openpair_, close=close,
             deleteFile=deleteFile,
             lineColor=color1, fillColor=color2,
             toggleKeepPrevMode=toggle_keep_prev_mode,
+            toggleDate=toggleDate,
             delete=delete, edit=edit, copy=copy,
             undoLastPoint=undoLastPoint, undo=undo,
             addPointToEdge=addPointToEdge,
@@ -431,8 +440,8 @@ class MainWindow(QtWidgets.QMainWindow):
             zoom=zoom, zoomIn=zoomIn, zoomOut=zoomOut, zoomOrg=zoomOrg,
             fitWindow=fitWindow, fitWidth=fitWidth,
             zoomActions=zoomActions,
-            openNextImg=openNextImg, openPrevImg=openPrevImg,
-            fileMenuActions=(open_, opendir, save, saveAs, close, quit),
+            openNextPair=openNextPair, openPrevPair=openPrevPair,
+            fileMenuActions=(openpair_, opendir, save, saveAs, close, quit),
             tool=(),
             # XXX: need to add some actions here to activate the shortcut
             editMenu=(
@@ -449,6 +458,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 color2,
                 None,
                 toggle_keep_prev_mode,
+                toggleDate,
             ),
             # menu shown at right click
             menu=(
@@ -490,18 +500,21 @@ class MainWindow(QtWidgets.QMainWindow):
             edit=self.menu('&Edit'),
             view=self.menu('&View'),
             help=self.menu('&Help'),
-            recentFiles=QtWidgets.QMenu('Open &Recent'),
+            # recentFiles=QtWidgets.QMenu('Open &Recent'),
+            recentPairs=QtWidgets.QMenu('Open Pair &Recent'),
             labelList=labelMenu,
         )
 
         utils.addActions(
             self.menus.file,
             (
-                open_,
-                openNextImg,
-                openPrevImg,
+                # open_,
+                openpair_,
+                openNextPair,
+                openPrevPair,
                 opendir,
-                self.menus.recentFiles,
+                # self.menus.recentFiles,
+                self.menus.recentPairs,
                 save,
                 saveAs,
                 saveAuto,
@@ -551,10 +564,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.tools = self.toolbar('Tools')
         # Menu buttons on Left
         self.actions.tool = (
-            open_,
+            # open_,
+            openpair_,
             opendir,
-            openNextImg,
-            openPrevImg,
+            openNextPair,
+            openPrevPair,
             save,
             deleteFile,
             None,
@@ -584,9 +598,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self.output_dir = output_dir
 
         # Application state.
-        self.image = QtGui.QImage()
-        self.imagePath = None
-        self.recentFiles = []
+        # self.image = QtGui.QImage()
+        self.image_date1 = QtGui.QImage()
+        self.image_date2 = QtGui.QImage()
+        # self.imagePath = None
+        self.image_date1Path = None
+        self.image_date2Path = None
+        # self.recentFiles = []
+        self.recentPairs = []
         self.maxRecent = 7
         self.lineColor = None
         self.fillColor = None
@@ -594,10 +613,17 @@ class MainWindow(QtWidgets.QMainWindow):
         self.zoom_level = 100
         self.fit_window = False
 
-        if filename is not None and osp.isdir(filename):
-            self.importDirImages(filename, load=False)
+        # if filename is not None and osp.isdir(filename):
+        #     self.importDirImages(filename, load=False)
+        # else:
+        #     self.filename = filename
+        if filename_date1 is not None and filename_date2 is not None:
+            #Only filenames allowed, no directory
+            self.filename_date1 = filename_date1
+            self.filename_date2 = filename_date2
         else:
-            self.filename = filename
+            self.filename_date1 = filename_date1
+            self.filename_date2 = filename_date2
 
         if config['file_search']:
             self.fileSearch.setText(config['file_search'])
@@ -607,7 +633,8 @@ class MainWindow(QtWidgets.QMainWindow):
         # Restore application settings.
         self.settings = QtCore.QSettings('labelme', 'labelme')
         # FIXME: QSettings.value can return None on PyQt4
-        self.recentFiles = self.settings.value('recentFiles', []) or []
+        # self.recentFiles = self.settings.value('recentFiles', []) or []
+        self.recentPairs = self.settings.value('recentPairs', []) or []
         size = self.settings.value('window/size', QtCore.QSize(600, 500))
         position = self.settings.value('window/position', QtCore.QPoint(0, 0))
         self.resize(size)
@@ -627,8 +654,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.updateFileMenu()
         # Since loading the file may take some time,
         # make sure it runs in the background.
-        if self.filename is not None:
-            self.queueEvent(functools.partial(self.loadFile, self.filename))
+        # if self.filename is not None:
+        #     self.queueEvent(functools.partial(self.loadFile, self.filename))
+        if self.filename_date1 is not None and self.filename_date2 is not None:
+            self.queueEvent(functools.partial(self.loadFilePairs, self.filename_date1, self.filename_date2))
 
         # Callbacks:
         self.zoomWidget.valueChanged.connect(self.paintCanvas)
@@ -680,7 +709,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def setDirty(self):
         if self._config['auto_save'] or self.actions.saveAuto.isChecked():
-            label_file = osp.splitext(self.imagePath)[0] + '.json'
+            # label_file = osp.splitext(self.imagePath)[0] + '.json'
+            label_file = osp.splitext(self.imagePath_date1)[0].split('.')[0] + '.json'
             if self.output_dir:
                 label_file_without_path = osp.basename(label_file)
                 label_file = osp.join(self.output_dir, label_file_without_path)
@@ -690,8 +720,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.actions.save.setEnabled(True)
         self.actions.undo.setEnabled(self.canvas.isShapeRestorable)
         title = __appname__
-        if self.filename is not None:
-            title = '{} - {}*'.format(title, self.filename)
+        # if self.filename is not None:
+        #     title = '{} - {}*'.format(title, self.filename)
+        if self.filename_date1 is not None and self.filename_date2 is not None:
+            title = '{} - {}*'.format(title, osp.splitext(self.filename_date1)[0])
         self.setWindowTitle(title)
 
     def setClean(self):
@@ -704,8 +736,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.actions.createPointMode.setEnabled(True)
         self.actions.createLineStripMode.setEnabled(True)
         title = __appname__
-        if self.filename is not None:
-            title = '{} - {}'.format(title, self.filename)
+        # if self.filename is not None:
+        #     title = '{} - {}'.format(title, self.filename)
+        if self.filename_date1 is not None and self.filename_date2 is not None:
+            title = '{} - {}'.format(title, osp.splitext(self.filename_date1)[0])
         self.setWindowTitle(title)
 
         if self.hasLabelFile():
@@ -728,9 +762,15 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def resetState(self):
         self.labelList.clear()
-        self.filename = None
-        self.imagePath = None
-        self.imageData = None
+        # self.filename = None
+        self.filename_date1 = None
+        self.filename_date2 = None
+        # self.imagePath = None
+        self.image_date1Path = None
+        self.image_date2Path = None
+        # self.imageData = None
+        self.image_date1Data = None
+        self.image_date2Data = None
         self.labelFile = None
         self.otherData = None
         self.canvas.resetState()
@@ -741,12 +781,18 @@ class MainWindow(QtWidgets.QMainWindow):
             return items[0]
         return None
 
-    def addRecentFile(self, filename):
-        if filename in self.recentFiles:
-            self.recentFiles.remove(filename)
-        elif len(self.recentFiles) >= self.maxRecent:
-            self.recentFiles.pop()
-        self.recentFiles.insert(0, filename)
+    # def addRecentFile(self, filename):
+    #     if filename in self.recentFiles:
+    #         self.recentFiles.remove(filename)
+    #     elif len(self.recentFiles) >= self.maxRecent:
+    #         self.recentFiles.pop()
+    #     self.recentFiles.insert(0, filename)
+    def addRecentPair(self, filename_date1, filename_date2):
+        if (filename_date1, filename_date2) in self.recentPairs:
+            self.recentPairs.remove((filename_date1, filename_date2))
+        elif len(self.recentPairs) >= self.maxRecent:
+            self.recentPairs.pop()
+        self.recentPairs.insert(0, (filename_date1, filename_date2))
 
     # Callbacks
 
@@ -757,7 +803,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.actions.undo.setEnabled(self.canvas.isShapeRestorable)
 
     def tutorial(self):
-        url = 'https://github.com/wkentaro/labelme/tree/master/examples/tutorial'  # NOQA
+        url = 'https://github.com/granularai/labelme/tree/labelus/examples/tutorial'  # NOQA
         webbrowser.open(url)
 
     def toggleDrawingSensitive(self, drawing=True):
@@ -831,19 +877,31 @@ class MainWindow(QtWidgets.QMainWindow):
         self.toggleDrawMode(True)
 
     def updateFileMenu(self):
-        current = self.filename
+        # current = self.filename
+        current_date1 = self.filename_date1
+        current_date2 = self.filename_date2
 
-        def exists(filename):
-            return osp.exists(str(filename))
+        # def exists(filename):
+            # return osp.exists(str(filename))
+        def exists(filename_date1, filename_date2):
+            return osp.exists(str(filename_date1)) and osp.exists(str(filename_date2))
 
-        menu = self.menus.recentFiles
+        # menu = self.menus.recentFiles
+        menu = self.menus.recentPairs
         menu.clear()
-        files = [f for f in self.recentFiles if f != current and exists(f)]
-        for i, f in enumerate(files):
+        # files = [f for f in self.recentFiles if f != current and exists(f)]
+        pairs = [f for f in self.recentPairs if f[0] != current_date1 and f[1] != current_date2 and exists(f[0], f[1])]
+        # for i, f in enumerate(files):
+        #     icon = utils.newIcon('labels')
+        #     action = QtWidgets.QAction(
+        #         icon, '&%d %s' % (i + 1, QtCore.QFileInfo(f).fileName()), self)
+        #     action.triggered.connect(functools.partial(self.loadRecent, f))
+        #     menu.addAction(action)
+        for i, f in enumerate(pairs):
             icon = utils.newIcon('labels')
             action = QtWidgets.QAction(
-                icon, '&%d %s' % (i + 1, QtCore.QFileInfo(f).fileName()), self)
-            action.triggered.connect(functools.partial(self.loadRecent, f))
+                icon, '&%d %s %s' % (i + 1, QtCore.QFileInfo(f[0]).fileName(), QtCore.QFileInfo(f[1]).fileName()), self)
+            action.triggered.connect(functools.partial(self.loadRecentPair, f[0], f[1]))
             menu.addAction(action)
 
     def popLabelListMenu(self, point):
@@ -902,7 +960,7 @@ class MainWindow(QtWidgets.QMainWindow):
         )
 
     def fileSelectionChanged(self):
-        items = self.fileListWidget.selectedItems()
+        items = self.filePairListWidget.selectedItems()
         if not items:
             return
         item = items[0]
@@ -910,11 +968,11 @@ class MainWindow(QtWidgets.QMainWindow):
         if not self.mayContinue():
             return
 
-        currIndex = self.imageList.index(str(item.text()))
-        if currIndex < len(self.imageList):
-            filename = self.imageList[currIndex]
-            if filename:
-                self.loadFile(filename)
+        currIndex = self.pairImageList.index(str(item.text()))
+        if currIndex < len(self.pairImageList):
+            filename_date1, filename_date2 = self.pairImageList[currIndex]
+            if filename_date1 and filename_date2:
+                self.loadPair(filename_date1, filename_date2)
 
     # React to canvas signals.
     def shapeSelectionChanged(self, selected_shapes):
@@ -1018,26 +1076,31 @@ class MainWindow(QtWidgets.QMainWindow):
             flag = item.checkState() == Qt.Checked
             flags[key] = flag
         try:
-            imagePath = osp.relpath(
-                self.imagePath, osp.dirname(filename))
-            imageData = self.imageData if self._config['store_data'] else None
+            image_date1Path = osp.relpath(
+                self.image_date1Path, osp.dirname(filename))
+            image_date2Path = osp.relpath(
+                self.image_date2Path, osp.dirname(filename))
+            image_date1Data = self.image_date1Data if self._config['store_data'] else None
+            image_date2Data = self.image_date2Data if self._config['store_data'] else None
             if osp.dirname(filename) and not osp.exists(osp.dirname(filename)):
                 os.makedirs(osp.dirname(filename))
             lf.save(
                 filename=filename,
                 shapes=shapes,
-                imagePath=imagePath,
-                imageData=imageData,
-                imageHeight=self.image.height(),
-                imageWidth=self.image.width(),
+                image_date1Path=image_date1Path,
+                image_date2Path=image_date2Path,
+                image_date1Data=image_date1Data,
+                image_date2Data=image_date2Data,
+                imageHeight=self.image_date1.height(),
+                imageWidth=self.image_date1.width(),
                 lineColor=self.lineColor.getRgb(),
                 fillColor=self.fillColor.getRgb(),
                 otherData=self.otherData,
                 flags=flags,
             )
             self.labelFile = lf
-            items = self.fileListWidget.findItems(
-                self.imagePath, Qt.MatchExactly
+            items = self.filePairListWidget.findItems(
+                self.image_date1Path, Qt.MatchExactly
             )
             if len(items) > 0:
                 if len(items) != 1:
@@ -1170,28 +1233,30 @@ class MainWindow(QtWidgets.QMainWindow):
         for item, shape in self.labelList.itemsToShapes:
             item.setCheckState(Qt.Checked if value else Qt.Unchecked)
 
-    def loadFile(self, filename=None):
-        """Load the specified file, or the last opened file if None."""
-        # changing fileListWidget loads file
-        if (filename in self.imageList and
-                self.fileListWidget.currentRow() !=
-                self.imageList.index(filename)):
-            self.fileListWidget.setCurrentRow(self.imageList.index(filename))
-            self.fileListWidget.repaint()
+    def loadPair(self, filename_date1=None, filename_date2=None):
+        """Load the specified pair, or the last opened file if None."""
+        # changing filePairListWidget loads file
+        if ((filename_date1, filename_date2) in self.pairImageList and
+                self.filePairListWidget.currentRow() !=
+                self.pairImageList.index((filename_date1, filename_date2))):
+            self.filePairListWidget.setCurrentRow(self.pairImageList.index((filename_date1, filename_date2)))
+            self.filePairListWidget.repaint()
             return
 
         self.resetState()
         self.canvas.setEnabled(False)
-        if filename is None:
-            filename = self.settings.value('filename', '')
-        filename = str(filename)
-        if not QtCore.QFile.exists(filename):
+        if filename_date1 is None and filename_date2 is None:
+            filename_date1 = self.settings.value('filename_date1', '')
+            filename_date2 = self.settings.value('filename_date2', '')
+        filename_date1 = str(filename_date1)
+        filename_date2 = str(filename_date2)
+        if not QtCore.QFile.exists(filename_date1) and not QtCore.QFile.exists(filename_date2):
             self.errorMessage(
-                'Error opening file', 'No such file: <b>%s</b>' % filename)
+                'Error opening pairs', 'No such pair: <b>%s %s</b>' % filename_date1, filename_date2)
             return False
         # assumes same name, but json extension
-        self.status("Loading %s..." % osp.basename(str(filename)))
-        label_file = osp.splitext(filename)[0] + '.json'
+        self.status("Loading %s %s..." % (osp.basename(str(filename_date1)), osp.basename(str(filename_date2))))
+        label_file = osp.splitext(filename_date1)[0] + '.json'
         if self.output_dir:
             label_file_without_path = osp.basename(label_file)
             label_file = osp.join(self.output_dir, label_file_without_path)
@@ -1207,10 +1272,15 @@ class MainWindow(QtWidgets.QMainWindow):
                     % (e, label_file))
                 self.status("Error reading %s" % label_file)
                 return False
-            self.imageData = self.labelFile.imageData
-            self.imagePath = osp.join(
+            self.image_date1Data = self.labelFile.image_date1Data
+            self.image_date2Data = self.labelFile.image_date2Data
+            self.image_date1Path = osp.join(
                 osp.dirname(label_file),
-                self.labelFile.imagePath,
+                self.labelFile.image_date1Path,
+            )
+            self.image_date2Path = osp.join(
+                osp.dirname(label_file),
+                self.labelFile.image_date2Path
             )
             if self.labelFile.lineColor is not None:
                 self.lineColor = QtGui.QColor(*self.labelFile.lineColor)
@@ -1218,27 +1288,32 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.fillColor = QtGui.QColor(*self.labelFile.fillColor)
             self.otherData = self.labelFile.otherData
         else:
-            self.imageData = LabelFile.load_image_file(filename)
-            if self.imageData:
-                self.imagePath = filename
+            self.image_date1Data, self.image_date2Data = LabelFile.load_image_pair(filename_date1, filename_date2)
+            if self.image_date1Data and self.image_date2Data:
+                self.image_date1Path = filename_date1
+                self.image_date2Path = filename_date2
             self.labelFile = None
-        image = QtGui.QImage.fromData(self.imageData)
+        image_date1 = QtGui.QImage.fromData(self.image_date1Data)
+        image_date2 = QtGui.QImage.fromData(self.image_date2Data)
 
-        if image.isNull():
+        if image_date1.isNull() or image_date2.isNull():
             formats = ['*.{}'.format(fmt.data().decode())
                        for fmt in QtGui.QImageReader.supportedImageFormats()]
             self.errorMessage(
-                'Error opening file',
-                '<p>Make sure <i>{0}</i> is a valid image file.<br/>'
-                'Supported image formats: {1}</p>'
-                .format(filename, ','.join(formats)))
-            self.status("Error reading %s" % filename)
+                'Error opening pair',
+                '<p>Make sure <i>{0}{1}</i> are valid image files.<br/>'
+                'Supported image formats: {2}</p>'
+                .format(filename_date1, filename_date2, ','.join(formats)))
+            self.status("Error reading %s and/or %s" % filename_date1, filename_date2)
             return False
-        self.image = image
-        self.filename = filename
+        self.image_date1 = image_date1
+        self.image_date2 = image_date2
+
+        self.filename_date1 = filename_date1
+        self.filename_date2 = filename_date2
         if self._config['keep_prev']:
             prev_shapes = self.canvas.shapes
-        self.canvas.loadPixmap(QtGui.QPixmap.fromImage(image))
+        self.canvas.loadPixmap(QtGui.QPixmap.fromImage(image_date1), 'date1') #Paint date1 on the canvas
         if self._config['flags']:
             self.loadFlags({k: False for k in self._config['flags']})
         if self.labelFile:
@@ -1251,19 +1326,20 @@ class MainWindow(QtWidgets.QMainWindow):
         self.canvas.setEnabled(True)
         self.adjustScale(initial=True)
         self.paintCanvas()
-        self.addRecentFile(self.filename)
+        self.addRecentPair(self.filename_date1, self.filename_date2)
         self.toggleActions(True)
-        self.status("Loaded %s" % osp.basename(str(filename)))
+        self.status("Loaded %s and %s" % (osp.basename(str(filename_date1)), osp.basename(str(filename_date2))))
         return True
 
     def resizeEvent(self, event):
-        if self.canvas and not self.image.isNull()\
+        if self.canvas and not self.image_date1.isNull()\
+           and not self.image_date2.isNull\
            and self.zoomMode != self.MANUAL_ZOOM:
             self.adjustScale()
         super(MainWindow, self).resizeEvent(event)
 
     def paintCanvas(self):
-        assert not self.image.isNull(), "cannot paint null image"
+        assert not self.image_date1.isNull(), "cannot paint null image"
         self.canvas.scale = 0.01 * self.zoomWidget.value()
         self.canvas.adjustSize()
         self.canvas.update()
@@ -1293,23 +1369,25 @@ class MainWindow(QtWidgets.QMainWindow):
         if not self.mayContinue():
             event.ignore()
         self.settings.setValue(
-            'filename', self.filename if self.filename else '')
+            'filename_date1', self.filename_date1 if self.filename_date1 else '')
+        self.settings.setValue(
+            'filename_date2', self.filename_date2 if self.filename_date2 else '')
         self.settings.setValue('window/size', self.size())
         self.settings.setValue('window/position', self.pos())
         self.settings.setValue('window/state', self.saveState())
         self.settings.setValue('line/color', self.lineColor)
         self.settings.setValue('fill/color', self.fillColor)
-        self.settings.setValue('recentFiles', self.recentFiles)
+        self.settings.setValue('recentPairs', self.recentPairs)
         # ask the use for where to save the labels
         # self.settings.setValue('window/geometry', self.saveGeometry())
 
     # User Dialogs #
 
-    def loadRecent(self, filename):
+    def loadRecentPair(self, filename_date1, filename_date2):
         if self.mayContinue():
-            self.loadFile(filename)
+            self.loadPair(filename_date1, filename_date2)
 
-    def openPrevImg(self, _value=False):
+    def openPrevPair(self, _value=False):
         keep_prev = self._config['keep_prev']
         if QtGui.QGuiApplication.keyboardModifiers() == \
                 (QtCore.Qt.ControlModifier | QtCore.Qt.ShiftModifier):
@@ -1318,21 +1396,21 @@ class MainWindow(QtWidgets.QMainWindow):
         if not self.mayContinue():
             return
 
-        if len(self.imageList) <= 0:
+        if len(self.pairImageList) <= 0:
             return
 
-        if self.filename is None:
+        if self.filename_date1 is None or self.filename_date2 is None:
             return
 
-        currIndex = self.imageList.index(self.filename)
+        currIndex = self.pairImageList.index((self.filename_date1, self.filename_date2))
         if currIndex - 1 >= 0:
-            filename = self.imageList[currIndex - 1]
-            if filename:
-                self.loadFile(filename)
+            filename_date1, filename_date2 = self.pairImageList[currIndex - 1]
+            if filename_date1 and filename_date2:
+                self.loadPair(filename_date1, filename_date2)
 
         self._config['keep_prev'] = keep_prev
 
-    def openNextImg(self, _value=False, load=True):
+    def openNextPair(self, _value=False, load=True):
         keep_prev = self._config['keep_prev']
         if QtGui.QGuiApplication.keyboardModifiers() == \
                 (QtCore.Qt.ControlModifier | QtCore.Qt.ShiftModifier):
@@ -1341,46 +1419,50 @@ class MainWindow(QtWidgets.QMainWindow):
         if not self.mayContinue():
             return
 
-        if len(self.imageList) <= 0:
+        if len(self.pairImageList) <= 0:
             return
 
         filename = None
-        if self.filename is None:
-            filename = self.imageList[0]
+        if self.filename_date1 is None and self.filename_date2 is None:
+            filename_date1, filename_date2 = self.pairImageList[0]
         else:
-            currIndex = self.imageList.index(self.filename)
-            if currIndex + 1 < len(self.imageList):
-                filename = self.imageList[currIndex + 1]
+            currIndex = self.pairImageList.index((self.filename_date1, self.filename_date2))
+            if currIndex + 1 < len(self.pairImageList):
+                filename_date1, filename_date2 = self.pairImageList[currIndex + 1]
             else:
-                filename = self.imageList[-1]
-        self.filename = filename
+                filename_date1, filename_date2 = self.pairImageList[-1]
+        self.filename_date1 = filename_date1
+        self.filename_date2 = filename_date2
 
-        if self.filename and load:
-            self.loadFile(self.filename)
+        if self.filename_date1 and self.filename_date2 and load:
+            self.loadPair(self.filename_date1, self.filename_date2)
 
         self._config['keep_prev'] = keep_prev
 
-    def openFile(self, _value=False):
+    def openPair(self, _value=False):
         if not self.mayContinue():
             return
-        path = osp.dirname(str(self.filename)) if self.filename else '.'
+        date1_path = osp.dirname(str(self.filename_date1)) if self.filename_date1 else '.'
         formats = ['*.{}'.format(fmt.data().decode())
                    for fmt in QtGui.QImageReader.supportedImageFormats()]
         filters = "Image & Label files (%s)" % ' '.join(
             formats + ['*%s' % LabelFile.suffix])
-        filename = QtWidgets.QFileDialog.getOpenFileName(
+        filenames = QtWidgets.QFileDialog.getOpenFileNames(
             self, '%s - Choose Image or Label file' % __appname__,
-            path, filters)
+            date1_path, filters)
         if QT5:
-            filename, _ = filename
-        filename = str(filename)
-        if filename:
-            self.loadFile(filename)
+            filenames, _ = filenames
+            filenames.sort()
+            filename_date1, filename_date2 = filenames
+        filenames.sort()
+        filename_date1, filename_date2 = filenames
+        if filename_date1 and filename_date2:
+            self.loadPair(filename_date1, filename_date2)
 
     def changeOutputDirDialog(self, _value=False):
         default_output_dir = self.output_dir
-        if default_output_dir is None and self.filename:
-            default_output_dir = osp.dirname(self.filename)
+        if default_output_dir is None and self.filename_date1 and self.filename_date2:
+            default_output_dir = osp.dirname(self.filename_date1)
         if default_output_dir is None:
             default_output_dir = self.currentPath()
 
@@ -1402,17 +1484,19 @@ class MainWindow(QtWidgets.QMainWindow):
             ('Change Annotations Dir', self.output_dir))
         self.statusBar().show()
 
-        current_filename = self.filename
-        self.importDirImages(self.lastOpenDir, load=False)
+        current_filename_date1 = self.filename_date1
+        current_filename_date2 = self.filename_date2
+        self.importDirPairs(self.lastOpenDir, load=False)
 
-        if current_filename in self.imageList:
+        if (current_filename_date1, current_filename_date2) in self.pairImageList:
             # retain currently selected file
-            self.fileListWidget.setCurrentRow(
-                self.imageList.index(current_filename))
-            self.fileListWidget.repaint()
+            self.filePairListWidget.setCurrentRow(
+                self.pairImageList.index((current_filename_date1, current_filename_date2)))
+            self.filePairListWidget.repaint()
 
     def saveFile(self, _value=False):
-        assert not self.image.isNull(), "cannot save empty image"
+        assert not self.image_date1.isNull(), "cannot save empty image date1"
+        assert not self.image_date2.isNull(), "cannot save empty image date2"
         if self._config['flags'] or self.hasLabels():
             if self.labelFile:
                 # DL20180323 - overwrite when in directory
@@ -1424,7 +1508,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 self._saveFile(self.saveFileDialog())
 
     def saveFileAs(self, _value=False):
-        assert not self.image.isNull(), "cannot save empty image"
+        assert not self.image_date1.isNull(), "cannot save empty image date1"
+        assert not self.image_date2.isNull(), "cannot save empty image date2"
         if self.hasLabels():
             self._saveFile(self.saveFileDialog())
 
@@ -1443,7 +1528,7 @@ class MainWindow(QtWidgets.QMainWindow):
         dlg.setAcceptMode(QtWidgets.QFileDialog.AcceptSave)
         dlg.setOption(QtWidgets.QFileDialog.DontConfirmOverwrite, False)
         dlg.setOption(QtWidgets.QFileDialog.DontUseNativeDialog, False)
-        basename = osp.basename(osp.splitext(self.filename)[0])
+        basename = osp.basename(osp.splitext(self.filename_date1)[0].split('.')[0])
         if self.output_dir:
             default_labelfile_name = osp.join(
                 self.output_dir, basename + LabelFile.suffix
@@ -1462,7 +1547,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _saveFile(self, filename):
         if filename and self.saveLabels(filename):
-            self.addRecentFile(filename)
+            self.addRecentPair(self.filename_date1, self.filename_date2)
             self.setClean()
 
     def closeFile(self, _value=False):
@@ -1475,10 +1560,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.actions.saveAs.setEnabled(False)
 
     def getLabelFile(self):
-        if self.filename.lower().endswith('.json'):
-            label_file = self.filename
+        if self.filename_date1.lower().endswith('.json'):
+            label_file = self.filename_date1
         else:
-            label_file = osp.splitext(self.filename)[0] + '.json'
+            label_file = osp.splitext(self.filename_date1)[0] + '.json'
 
         return label_file
 
@@ -1495,7 +1580,7 @@ class MainWindow(QtWidgets.QMainWindow):
             os.remove(label_file)
             logger.info('Label file is removed: {}'.format(label_file))
 
-            item = self.fileListWidget.currentItem()
+            item = self.filePairListWidget.currentItem()
             item.setCheckState(Qt.Unchecked)
 
             self.resetState()
@@ -1510,7 +1595,7 @@ class MainWindow(QtWidgets.QMainWindow):
         return True
 
     def hasLabelFile(self):
-        if self.filename is None:
+        if self.filename_date1 is None and self.filename_date2:
             return False
 
         label_file = self.getLabelFile()
@@ -1539,7 +1624,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self, title, '<p><b>%s</b></p>%s' % (title, message))
 
     def currentPath(self):
-        return osp.dirname(str(self.filename)) if self.filename else '.'
+        return osp.dirname(str(self.filename_date1)) if self.filename_date1 else '.'
 
     def chooseColor1(self):
         color = self.colorDialog.getColor(
@@ -1562,6 +1647,17 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def toggleKeepPrevMode(self):
         self._config['keep_prev'] = not self._config['keep_prev']
+
+    def toggleDatePair(self):
+        title = __appname__
+        if self.canvas.date == 'date1':
+            self.canvas.loadOtherDate(QtGui.QPixmap.fromImage(self.image_date2), 'date2')
+            title = '{} - {}'.format(title, osp.splitext(self.filename_date2)[0])
+            self.setWindowTitle(title)
+        elif self.canvas.date == 'date2':
+            self.canvas.loadOtherDate(QtGui.QPixmap.fromImage(self.image_date1), 'date1')
+            title = '{} - {}'.format(title, osp.splitext(self.filename_date1)[0])
+            self.setWindowTitle(title)
 
     def deleteSelectedShape(self):
         yes, no = QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No
@@ -1622,23 +1718,24 @@ class MainWindow(QtWidgets.QMainWindow):
         self.importDirImages(targetDirPath)
 
     @property
-    def imageList(self):
+    def pairImageList(self):
         lst = []
-        for i in range(self.fileListWidget.count()):
-            item = self.fileListWidget.item(i)
+        for i in range(self.filePairListWidget.count()):
+            item = self.filePairListWidget.item(i)
             lst.append(item.text())
         return lst
 
-    def importDirImages(self, dirpath, pattern=None, load=True):
-        self.actions.openNextImg.setEnabled(True)
-        self.actions.openPrevImg.setEnabled(True)
+    def importDirPairs(self, dirpath, pattern=None, load=True):
+        self.actions.openNextPair.setEnabled(True)
+        self.actions.openPrevPair.setEnabled(True)
 
         if not self.mayContinue() or not dirpath:
             return
 
         self.lastOpenDir = dirpath
-        self.filename = None
-        self.fileListWidget.clear()
+        self.filename_date1 = None
+        self.filename_date2 = None
+        self.filePairListWidget.clear()
         for filename in self.scanAllImages(dirpath):
             if pattern and pattern not in filename:
                 continue
@@ -1653,8 +1750,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 item.setCheckState(Qt.Checked)
             else:
                 item.setCheckState(Qt.Unchecked)
-            self.fileListWidget.addItem(item)
-        self.openNextImg(load=load)
+            self.filePairListWidget.addItem(item)
+        self.openNextPair(load=load)
 
     def scanAllImages(self, folderPath):
         extensions = ['.%s' % fmt.data().decode("ascii").lower()

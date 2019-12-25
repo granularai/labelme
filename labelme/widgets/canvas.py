@@ -57,6 +57,7 @@ class Canvas(QtWidgets.QWidget):
         self.offsets = QtCore.QPoint(), QtCore.QPoint()
         self.scale = 1.0
         self.pixmap = QtGui.QPixmap()
+        self.date = None
         self.visible = {}
         self._hideBackround = False
         self.hideBackround = False
@@ -682,9 +683,15 @@ class Canvas(QtWidgets.QWidget):
             self.drawingPolygon.emit(False)
         self.repaint()
 
-    def loadPixmap(self, pixmap):
+    def loadPixmap(self, pixmap, date):
         self.pixmap = pixmap
+        self.date = date
         self.shapes = []
+        self.repaint()
+
+    def loadOtherDate(self, pixmap, date):
+        self.pixmap = pixmap
+        self.date = date
         self.repaint()
 
     def loadShapes(self, shapes, replace=True):

@@ -22,8 +22,12 @@ class LabelFile(object):
 
     def __init__(self, filename=None):
         self.shapes = ()
-        self.imagePath = None
-        self.imageData = None
+        # self.imagePath = None
+        self.image_date1Path = None
+        self.image_date2Path = None
+        # self.imageData = None
+        self.image_date1Data = None
+        self.image_date2Data = None #Bad file naming convention
         if filename is not None:
             self.load(filename)
         self.filename = filename
@@ -51,10 +55,41 @@ class LabelFile(object):
             f.seek(0)
             return f.read()
 
+    def load_image_pair(filename_date1, filename_date2):
+        try:
+            image_date1_pil = PIL.Image.open(filename_date1)
+            image_date2_pil = PIL.Image.open(filename_date2)
+        except IOError:
+            logger.error('Failed opening image pair: {} {}'.format(filename_date1, filename_date2))
+            return
+
+        # apply orientation to image according to exif
+        image_date1_pil = utils.apply_exif_orientation(image_date1_pil)
+        image_date2_pil = utils.apply_exif_orientation(image_date2_pil)
+
+        date1_f = io.BytesIO()
+        date2_f = io.BytesIO()
+        if date1_f and date2_f:
+            date1_ext = osp.splitext(filename_date1)[-1].lower()
+            date2_ext = osp.splitext(filename_date2)[-1].lower()
+            if PY2 and QT4:
+                format = 'PNG'
+            elif date1_ext in ['.jpg', '.jpeg'] and date2_ext in ['.jpg', '.jpeg']:
+                format = 'JPEG'
+            else:
+                format = 'PNG'
+            image_date1_pil.save(date1_f, format=format)
+            image_date2_pil.save(date2_f, format=format)
+            date1_f.seek(0)
+            date2_f.seek(0)
+            return date1_f.read(), date2_f.read()
+
     def load(self, filename):
         keys = [
-            'imageData',
-            'imagePath',
+            'image_date1Data',
+            'image_date2Data'
+            'image_date1Path',
+            'image_date2Path',
             'lineColor',
             'fillColor',
             'shapes',  # polygonal annotations
@@ -65,18 +100,27 @@ class LabelFile(object):
         try:
             with open(filename, 'rb' if PY2 else 'r') as f:
                 data = json.load(f)
-            if data['imageData'] is not None:
-                imageData = base64.b64decode(data['imageData'])
+            if data['image_date1Data'] is not None and data['image_date2Data'] is not None:
+                image_date1Data = base64.b64decode(data['image_date1Data'])
+                image_date2Data = base64.b64decode(data['image_date2Data'])
                 if PY2 and QT4:
-                    imageData = utils.img_data_to_png_data(imageData)
+                    image_date1Data = utils.img_data_to_png_data(image_date1Data)
+                    image_date2Data = utils.img_data_to_png_data(image_date2Data)
             else:
                 # relative path from label file to relative path from cwd
-                imagePath = osp.join(osp.dirname(filename), data['imagePath'])
-                imageData = self.load_image_file(imagePath)
+                image_date1Path = osp.join(osp.dirname(filename), data['image_date1Path'])
+                image_date2Path = osp.join(osp.dirname(filename), data['image_date2Path'])
+                image_date1Data, image_date2Data = self.load_image_pair(image_date1Path, image_date2Path)
             flags = data.get('flags') or {}
-            imagePath = data['imagePath']
+            image_date1Path = data['image_date1Path']
+            image_date2Path = data['image_date2Path']
             self._check_image_height_and_width(
-                base64.b64encode(imageData).decode('utf-8'),
+                base64.b64encode(image_date1Data).decode('utf-8'),
+                data.get('imageHeight'),
+                data.get('imageWidth'),
+            )
+            self._check_image_height_and_width(
+                base64.b64encode(image_date2Data).decode('utf-8'),
                 data.get('imageHeight'),
                 data.get('imageWidth'),
             )
@@ -104,8 +148,10 @@ class LabelFile(object):
         # Only replace data after everything is loaded.
         self.flags = flags
         self.shapes = shapes
-        self.imagePath = imagePath
-        self.imageData = imageData
+        self.image_date1Path = image_date1Path
+        self.image_date2Path = image_date2Path
+        self.image_date1Data = image_date1Data
+        self.image_date2Data = image_date2Data
         self.lineColor = lineColor
         self.fillColor = fillColor
         self.filename = filename
@@ -132,19 +178,25 @@ class LabelFile(object):
         self,
         filename,
         shapes,
-        imagePath,
+        image_date1Path,
+        image_date2Path,
         imageHeight,
         imageWidth,
-        imageData=None,
+        image_date1Data=None,
+        image_date2Data=None,
         lineColor=None,
         fillColor=None,
         otherData=None,
         flags=None,
     ):
-        if imageData is not None:
-            imageData = base64.b64encode(imageData).decode('utf-8')
+        if image_date1Data is not None and image_date2Data is not None:
+            image_date1Data = base64.b64encode(image_date1Data).decode('utf-8')
+            image_date2Data = base64.b64encode(image_date2Data).decode('utf-8')
             imageHeight, imageWidth = self._check_image_height_and_width(
-                imageData, imageHeight, imageWidth
+                image_date1Data, imageHeight, imageWidth
+            )
+            imageHeight, imageWidth = self._check_image_height_and_width(
+                image_date2Data, imageHeight, imageWidth
             )
         if otherData is None:
             otherData = {}
@@ -156,8 +208,10 @@ class LabelFile(object):
             shapes=shapes,
             lineColor=lineColor,
             fillColor=fillColor,
-            imagePath=imagePath,
-            imageData=imageData,
+            image_date1Path=image_date1Path,
+            image_date2Path=image_date2Path,
+            image_date1Data=image_date1Data,
+            image_date2Data=image_date2Data,
             imageHeight=imageHeight,
             imageWidth=imageWidth,
         )

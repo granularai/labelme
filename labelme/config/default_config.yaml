@@ -45,7 +45,7 @@ epsilon: 10.0
 
 shortcuts:
   close: Ctrl+W
-  open: Ctrl+O
+  openpair: Ctrl+O
   open_dir: Ctrl+U
   quit: Ctrl+Q
   save: Ctrl+S
@@ -78,3 +78,4 @@ shortcuts:
   edit_line_color: Ctrl+L
   edit_fill_color: Ctrl+Shift+L
   toggle_keep_prev_mode: Ctrl+P
+  toggle_date: Z
