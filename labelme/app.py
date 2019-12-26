@@ -463,7 +463,6 @@ class MainWindow(QtWidgets.QMainWindow):
             edit=self.menu('&Edit'),
             view=self.menu('&View'),
             help=self.menu('&Help'),
-            # recentFiles=QtWidgets.QMenu('Open &Recent'),
             recentPairs=QtWidgets.QMenu('Open Pair &Recent'),
             labelList=labelMenu,
         )
@@ -559,13 +558,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.output_dir = output_dir
 
         # Application state.
-        # self.image = QtGui.QImage()
         self.image_date1 = QtGui.QImage()
         self.image_date2 = QtGui.QImage()
-        # self.imagePath = None
         self.image_date1Path = None
         self.image_date2Path = None
-        # self.recentFiles = []
         self.recentPairs = []
         self.maxRecent = 7
         self.lineColor = None
@@ -589,7 +585,6 @@ class MainWindow(QtWidgets.QMainWindow):
         # Restore application settings.
         self.settings = QtCore.QSettings('labelus', 'labelus')
         # FIXME: QSettings.value can return None on PyQt4
-        # self.recentFiles = self.settings.value('recentFiles', []) or []
         self.recentPairs = self.settings.value('recentPairs', []) or []
         size = self.settings.value('window/size', QtCore.QSize(600, 500))
         position = self.settings.value('window/position', QtCore.QPoint(0, 0))
@@ -610,8 +605,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.updateFileMenu()
         # Since loading the file may take some time,
         # make sure it runs in the background.
-        # if self.filename is not None:
-        #     self.queueEvent(functools.partial(self.loadFile, self.filename))
         if self.filename_date1 is not None and self.filename_date2 is not None:
             self.queueEvent(functools.partial(self.loadFilePairs, self.filename_date1, self.filename_date2))
 
