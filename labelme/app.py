@@ -81,7 +81,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.labelList.itemActivated.connect(self.labelSelectionChanged)
         self.labelList.itemSelectionChanged.connect(self.labelSelectionChanged)
-        self.labelList.itemDoubleClicked.connect(self.editLabel)
         # Connect to itemChanged to detect checkbox changes.
         self.labelList.itemChanged.connect(self.labelItemChanged)
         self.labelList.setDragDropMode(
@@ -360,10 +359,6 @@ class MainWindow(QtWidgets.QMainWindow):
             self.MANUAL_ZOOM: lambda: 1,
         }
 
-        edit = action('&Edit Label', self.editLabel, shortcuts['edit_label'],
-                      'edit', 'Modify the label of the selected polygon',
-                      enabled=False)
-
         shapeLineColor = action(
             'Shape &Line Color', self.chshapeLineColor, icon='color-line',
             tip='Change the line color for this specific shape', enabled=False)
@@ -383,7 +378,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Lavel list context menu.
         labelMenu = QtWidgets.QMenu()
-        utils.addActions(labelMenu, (edit, delete))
+        utils.addActions(labelMenu, (delete,))
         self.labelList.setContextMenuPolicy(Qt.CustomContextMenu)
         self.labelList.customContextMenuRequested.connect(
             self.popLabelListMenu)
@@ -397,7 +392,7 @@ class MainWindow(QtWidgets.QMainWindow):
             lineColor=color1, fillColor=color2,
             toggleKeepPrevMode=toggle_keep_prev_mode,
             toggleDate=toggleDate,
-            delete=delete, edit=edit, copy=copy,
+            delete=delete, copy=copy,
             undoLastPoint=undoLastPoint, undo=undo,
             addPointToEdge=addPointToEdge,
             createMode=createMode, editMode=editMode,
@@ -415,7 +410,6 @@ class MainWindow(QtWidgets.QMainWindow):
             tool=(),
             # XXX: need to add some actions here to activate the shortcut
             editMenu=(
-                edit,
                 copy,
                 delete,
                 None,
@@ -439,7 +433,6 @@ class MainWindow(QtWidgets.QMainWindow):
                 createPointMode,
                 createLineStripMode,
                 editMode,
-                edit,
                 copy,
                 delete,
                 shapeLineColor,
@@ -594,7 +587,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # XXX: Could be completely declarative.
         # Restore application settings.
-        self.settings = QtCore.QSettings('labelme', 'labelme')
+        self.settings = QtCore.QSettings('labelus', 'labelus')
         # FIXME: QSettings.value can return None on PyQt4
         # self.recentFiles = self.settings.value('recentFiles', []) or []
         self.recentPairs = self.settings.value('recentPairs', []) or []
@@ -673,7 +666,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def setDirty(self):
         if self._config['auto_save'] or self.actions.saveAuto.isChecked():
             # label_file = osp.splitext(self.imagePath)[0] + '.json'
-            label_file = osp.splitext(self.imagePath_date1)[0].split('.')[0] + '.json'
+            label_file = osp.splitext(self.image_date1Path)[0].split('.')[0] + '.json'
             if self.output_dir:
                 label_file_without_path = osp.basename(label_file)
                 label_file = osp.join(self.output_dir, label_file_without_path)
@@ -886,35 +879,6 @@ class MainWindow(QtWidgets.QMainWindow):
                     return True
         return False
 
-    def editLabel(self, item=False):
-        if item and not isinstance(item, QtWidgets.QListWidgetItem):
-            raise TypeError('unsupported type of item: {}'.format(type(item)))
-
-        if not self.canvas.editing():
-            return
-        if not item:
-            item = self.currentItem()
-        if item is None:
-            return
-        shape = self.labelList.get_shape_from_item(item)
-        if shape is None:
-            return
-        text, flags = self.labelDialog.popUp(shape.label, flags=shape.flags)
-        if text is None:
-            return
-        if not self.validateLabel(text):
-            self.errorMessage('Invalid label',
-                              "Invalid label '{}' with validation type '{}'"
-                              .format(text, self._config['validate_label']))
-            return
-        shape.label = text
-        shape.flags = flags
-        item.setText(text)
-        self.setDirty()
-        if not self.uniqLabelList.findItems(text, Qt.MatchExactly):
-            self.uniqLabelList.addItem(text)
-            self.uniqLabelList.sortItems()
-
     def locationSearchChanged(self):
         self.importDirPairs(
             self.lastOpenDir,
@@ -952,7 +916,6 @@ class MainWindow(QtWidgets.QMainWindow):
         n_selected = len(selected_shapes)
         self.actions.delete.setEnabled(n_selected)
         self.actions.copy.setEnabled(n_selected)
-        self.actions.edit.setEnabled(n_selected == 1)
         self.actions.shapeLineColor.setEnabled(n_selected)
         self.actions.shapeFillColor.setEnabled(n_selected)
 
@@ -1528,7 +1491,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if not self.dirty:
             return True
         mb = QtWidgets.QMessageBox
-        msg = 'Save annotations to "{}" before closing?'.format(self.filename)
+        msg = 'Save annotations to "{}" before closing?'.format(self.filename_date1)
         answer = mb.question(self,
                              'Save annotations?',
                              msg,
