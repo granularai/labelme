@@ -75,28 +75,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self._noSelectionSlot = False
 
-        # Main widgets and related state.
-        self.labelDialog = LabelDialog(
-            parent=self,
-            labels=self._config['labels'],
-            sort_labels=self._config['sort_labels'],
-            show_text_field=self._config['show_label_text_field'],
-            completion=self._config['label_completion'],
-            fit_to_content=self._config['fit_to_content'],
-            flags=self._config['label_flags']
-        )
 
         self.labelList = LabelQListWidget()
         self.lastOpenDir = None
-
-        self.flag_dock = self.flag_widget = None
-        self.flag_dock = QtWidgets.QDockWidget('Flags', self)
-        self.flag_dock.setObjectName('Flags')
-        self.flag_widget = QtWidgets.QListWidget()
-        if config['flags']:
-            self.loadFlags({k: False for k in config['flags']})
-        self.flag_dock.setWidget(self.flag_widget)
-        self.flag_widget.itemChanged.connect(self.setDirty)
 
         self.labelList.itemActivated.connect(self.labelSelectionChanged)
         self.labelList.itemSelectionChanged.connect(self.labelSelectionChanged)
@@ -110,34 +91,25 @@ class MainWindow(QtWidgets.QMainWindow):
         self.shape_dock.setObjectName('Labels')
         self.shape_dock.setWidget(self.labelList)
 
-        self.uniqLabelList = EscapableQListWidget()
-        self.uniqLabelList.setToolTip(
-            "Select label to start annotating for it. "
-            "Press 'Esc' to deselect.")
-        if self._config['labels']:
-            self.uniqLabelList.addItems(self._config['labels'])
-            self.uniqLabelList.sortItems()
-        self.label_dock = QtWidgets.QDockWidget(u'Label List', self)
-        self.label_dock.setObjectName(u'Label List')
-        self.label_dock.setWidget(self.uniqLabelList)
 
-        self.fileSearch = QtWidgets.QLineEdit()
-        self.fileSearch.setPlaceholderText('Search Filename')
-        self.fileSearch.textChanged.connect(self.fileSearchChanged)
-        self.filePairListWidget = QtWidgets.QListWidget()
-        self.filePairListWidget.itemSelectionChanged.connect(
-            self.fileSelectionChanged
+        #fileSearch --> bbSearch
+        self.locationSearch = QtWidgets.QLineEdit()
+        self.locationSearch.setPlaceholderText('Search Location')
+        self.locationSearch.textChanged.connect(self.locationSearchChanged)
+        self.locationListWidget = QtWidgets.QListWidget()
+        self.locationListWidget.itemSelectionChanged.connect(
+            self.locationSelectionChanged
         )
-        fileListLayout = QtWidgets.QVBoxLayout()
-        fileListLayout.setContentsMargins(0, 0, 0, 0)
-        fileListLayout.setSpacing(0)
-        fileListLayout.addWidget(self.fileSearch)
-        fileListLayout.addWidget(self.filePairListWidget)
-        self.file_dock = QtWidgets.QDockWidget(u'File List', self)
-        self.file_dock.setObjectName(u'Files')
-        filePairListWidget = QtWidgets.QWidget()
-        filePairListWidget.setLayout(fileListLayout)
-        self.file_dock.setWidget(filePairListWidget)
+        locationListLayout = QtWidgets.QVBoxLayout()
+        locationListLayout.setContentsMargins(0, 0, 0, 0)
+        locationListLayout.setSpacing(0)
+        locationListLayout.addWidget(self.locationSearch)
+        locationListLayout.addWidget(self.locationListWidget)
+        self.location_dock = QtWidgets.QDockWidget(u'Location List', self)
+        self.location_dock.setObjectName(u'Location')
+        locationListWidget = QtWidgets.QWidget()
+        locationListWidget.setLayout(locationListLayout)
+        self.location_dock.setWidget(locationListWidget)
 
         self.zoomWidget = ZoomWidget()
         self.colorDialog = ColorDialog(parent=self)
@@ -164,7 +136,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setCentralWidget(scrollArea)
 
         features = QtWidgets.QDockWidget.DockWidgetFeatures()
-        for dock in ['flag_dock', 'label_dock', 'shape_dock', 'file_dock']:
+        for dock in ['shape_dock', 'location_dock']:
             if self._config[dock]['closable']:
                 features = features | QtWidgets.QDockWidget.DockWidgetClosable
             if self._config[dock]['floatable']:
@@ -175,10 +147,8 @@ class MainWindow(QtWidgets.QMainWindow):
             if self._config[dock]['show'] is False:
                 getattr(self, dock).setVisible(False)
 
-        self.addDockWidget(Qt.RightDockWidgetArea, self.flag_dock)
-        self.addDockWidget(Qt.RightDockWidgetArea, self.label_dock)
         self.addDockWidget(Qt.RightDockWidgetArea, self.shape_dock)
-        self.addDockWidget(Qt.RightDockWidgetArea, self.file_dock)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.location_dock)
 
         # Actions
         action = functools.partial(utils.newAction, self)
@@ -529,10 +499,8 @@ class MainWindow(QtWidgets.QMainWindow):
         utils.addActions(
             self.menus.view,
             (
-                self.flag_dock.toggleViewAction(),
-                self.label_dock.toggleViewAction(),
                 self.shape_dock.toggleViewAction(),
-                self.file_dock.toggleViewAction(),
+                self.location_dock.toggleViewAction(),
                 None,
                 fill_drawing,
                 None,
@@ -613,21 +581,16 @@ class MainWindow(QtWidgets.QMainWindow):
         self.zoom_level = 100
         self.fit_window = False
 
-        # if filename is not None and osp.isdir(filename):
-        #     self.importDirImages(filename, load=False)
-        # else:
-        #     self.filename = filename
-        if filename_date1 is not None and filename_date2 is not None:
+        if filename_date1 is not None and filename_date2 is not None and osp.isdir(filename_date1):
             #Only filenames allowed, no directory
-            self.filename_date1 = filename_date1
-            self.filename_date2 = filename_date2
+            self.importDirPairs(filename_date1, load=False)
         else:
             self.filename_date1 = filename_date1
             self.filename_date2 = filename_date2
 
-        if config['file_search']:
-            self.fileSearch.setText(config['file_search'])
-            self.fileSearchChanged()
+        if config['location_search']:
+            self.locationSearch.setText(config['location_search'])
+            self.locationSearchChanged()
 
         # XXX: Could be completely declarative.
         # Restore application settings.
@@ -952,15 +915,15 @@ class MainWindow(QtWidgets.QMainWindow):
             self.uniqLabelList.addItem(text)
             self.uniqLabelList.sortItems()
 
-    def fileSearchChanged(self):
-        self.importDirImages(
+    def locationSearchChanged(self):
+        self.importDirPairs(
             self.lastOpenDir,
-            pattern=self.fileSearch.text(),
+            pattern=self.locationSearch.text(),
             load=False,
         )
 
-    def fileSelectionChanged(self):
-        items = self.filePairListWidget.selectedItems()
+    def locationSelectionChanged(self):
+        items = self.locationListWidget.selectedItems()
         if not items:
             return
         item = items[0]
@@ -968,7 +931,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if not self.mayContinue():
             return
 
-        currIndex = self.pairImageList.index(str(item.text()))
+        currIndex = self.pairImageList.index((str(item.text()) + '.d1.jpg', str(item.text()) + '.d2.jpg'))
         if currIndex < len(self.pairImageList):
             filename_date1, filename_date2 = self.pairImageList[currIndex]
             if filename_date1 and filename_date2:
@@ -999,10 +962,6 @@ class MainWindow(QtWidgets.QMainWindow):
         item.setCheckState(Qt.Checked)
         self.labelList.itemsToShapes.append((item, shape))
         self.labelList.addItem(item)
-        if not self.uniqLabelList.findItems(shape.label, Qt.MatchExactly):
-            self.uniqLabelList.addItem(shape.label)
-            self.uniqLabelList.sortItems()
-        self.labelDialog.addLabelHistory(item.text())
         for action in self.actions.onShapesPresent:
             action.setEnabled(True)
 
@@ -1045,14 +1004,6 @@ class MainWindow(QtWidgets.QMainWindow):
             s.append(shape)
         self.loadShapes(s)
 
-    def loadFlags(self, flags):
-        self.flag_widget.clear()
-        for key, flag in flags.items():
-            item = QtWidgets.QListWidgetItem(key)
-            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
-            item.setCheckState(Qt.Checked if flag else Qt.Unchecked)
-            self.flag_widget.addItem(item)
-
     def saveLabels(self, filename):
         lf = LabelFile()
 
@@ -1069,12 +1020,6 @@ class MainWindow(QtWidgets.QMainWindow):
             )
 
         shapes = [format_shape(shape) for shape in self.labelList.shapes]
-        flags = {}
-        for i in range(self.flag_widget.count()):
-            item = self.flag_widget.item(i)
-            key = item.text()
-            flag = item.checkState() == Qt.Checked
-            flags[key] = flag
         try:
             image_date1Path = osp.relpath(
                 self.image_date1Path, osp.dirname(filename))
@@ -1096,11 +1041,11 @@ class MainWindow(QtWidgets.QMainWindow):
                 lineColor=self.lineColor.getRgb(),
                 fillColor=self.fillColor.getRgb(),
                 otherData=self.otherData,
-                flags=flags,
+                flags={},
             )
             self.labelFile = lf
-            items = self.filePairListWidget.findItems(
-                self.image_date1Path, Qt.MatchExactly
+            items = self.locationListWidget.findItems(
+                osp.splitext(self.image_date1Path)[0].split('.')[0], Qt.MatchExactly
             )
             if len(items) > 0:
                 if len(items) != 1:
@@ -1147,35 +1092,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
         position MUST be in global coordinates.
         """
-        items = self.uniqLabelList.selectedItems()
-        text = None
-        flags = {}
-        if items:
-            text = items[0].text()
-        if self._config['display_label_popup'] or not text:
-            # instance label auto increment
-            if self._config['instance_label_auto_increment']:
-                previous_label = self.labelDialog.edit.text()
-                split = previous_label.split('-')
-                if len(split) > 1 and split[-1].isdigit():
-                    split[-1] = str(int(split[-1]) + 1)
-                    instance_text = '-'.join(split)
-                else:
-                    instance_text = previous_label
-                if instance_text != '':
-                    text = instance_text
-            text, flags = self.labelDialog.popUp(text)
-            if text is None:
-                self.labelDialog.edit.setText(previous_label)
-
-        if text and not self.validateLabel(text):
-            self.errorMessage('Invalid label',
-                              "Invalid label '{}' with validation type '{}'"
-                              .format(text, self._config['validate_label']))
-            text = ''
+        text = str(self.labelList.count() + 1)
         if text:
             self.labelList.clearSelection()
-            self.addLabel(self.canvas.setLastLabel(text, flags))
+            self.addLabel(self.canvas.setLastLabel(text, {}))
             self.actions.editMode.setEnabled(True)
             self.actions.undoLastPoint.setEnabled(False)
             self.actions.undo.setEnabled(True)
@@ -1237,10 +1157,10 @@ class MainWindow(QtWidgets.QMainWindow):
         """Load the specified pair, or the last opened file if None."""
         # changing filePairListWidget loads file
         if ((filename_date1, filename_date2) in self.pairImageList and
-                self.filePairListWidget.currentRow() !=
+                self.locationListWidget.currentRow() !=
                 self.pairImageList.index((filename_date1, filename_date2))):
-            self.filePairListWidget.setCurrentRow(self.pairImageList.index((filename_date1, filename_date2)))
-            self.filePairListWidget.repaint()
+            self.locationListWidget.setCurrentRow(self.pairImageList.index((filename_date1, filename_date2)))
+            self.locationListWidget.repaint()
             return
 
         self.resetState()
@@ -1256,7 +1176,7 @@ class MainWindow(QtWidgets.QMainWindow):
             return False
         # assumes same name, but json extension
         self.status("Loading %s %s..." % (osp.basename(str(filename_date1)), osp.basename(str(filename_date2))))
-        label_file = osp.splitext(filename_date1)[0] + '.json'
+        label_file = osp.splitext(filename_date1)[0].split('.')[0] + '.json'
         if self.output_dir:
             label_file_without_path = osp.basename(label_file)
             label_file = osp.join(self.output_dir, label_file_without_path)
@@ -1314,12 +1234,8 @@ class MainWindow(QtWidgets.QMainWindow):
         if self._config['keep_prev']:
             prev_shapes = self.canvas.shapes
         self.canvas.loadPixmap(QtGui.QPixmap.fromImage(image_date1), 'date1') #Paint date1 on the canvas
-        if self._config['flags']:
-            self.loadFlags({k: False for k in self._config['flags']})
         if self.labelFile:
             self.loadLabels(self.labelFile.shapes)
-            if self.labelFile.flags is not None:
-                self.loadFlags(self.labelFile.flags)
         if self._config['keep_prev'] and not self.labelList.shapes:
             self.loadShapes(prev_shapes, replace=False)
         self.setClean()
@@ -1452,12 +1368,19 @@ class MainWindow(QtWidgets.QMainWindow):
             date1_path, filters)
         if QT5:
             filenames, _ = filenames
-            filenames.sort()
-            filename_date1, filename_date2 = filenames
         filenames.sort()
-        filename_date1, filename_date2 = filenames
-        if filename_date1 and filename_date2:
-            self.loadPair(filename_date1, filename_date2)
+
+        def match_dates(filename_date1, filename_date2):
+            if filename_date1.split('.')[0] == filename_date2.split('.')[0]:
+                return True
+            else:
+                self.status("Image pairs incorrect %s %s" % (filename_date1, filename_date2))
+                return False
+
+        if filenames and len(filenames) == 2:
+            filename_date1, filename_date2 = filenames
+            if filename_date1 and filename_date2 and match_dates(filename_date1, filename_date2):
+                self.loadPair(filename_date1, filename_date2)
 
     def changeOutputDirDialog(self, _value=False):
         default_output_dir = self.output_dir
@@ -1708,21 +1631,21 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.lastOpenDir and osp.exists(self.lastOpenDir):
             defaultOpenDirPath = self.lastOpenDir
         else:
-            defaultOpenDirPath = osp.dirname(self.filename) \
-                if self.filename else '.'
+            defaultOpenDirPath = osp.dirname(self.filename_date1) \
+                if self.filename_date1 else '.'
 
         targetDirPath = str(QtWidgets.QFileDialog.getExistingDirectory(
             self, '%s - Open Directory' % __appname__, defaultOpenDirPath,
             QtWidgets.QFileDialog.ShowDirsOnly |
             QtWidgets.QFileDialog.DontResolveSymlinks))
-        self.importDirImages(targetDirPath)
+        self.importDirPairs(targetDirPath)
 
     @property
     def pairImageList(self):
         lst = []
-        for i in range(self.filePairListWidget.count()):
-            item = self.filePairListWidget.item(i)
-            lst.append(item.text())
+        for i in range(self.locationListWidget.count()):
+            item = self.locationListWidget.item(i)
+            lst.append((item.text() + '.d1.jpg', item.text() + '.d2.jpg'))
         return lst
 
     def importDirPairs(self, dirpath, pattern=None, load=True):
@@ -1735,33 +1658,37 @@ class MainWindow(QtWidgets.QMainWindow):
         self.lastOpenDir = dirpath
         self.filename_date1 = None
         self.filename_date2 = None
-        self.filePairListWidget.clear()
-        for filename in self.scanAllImages(dirpath):
-            if pattern and pattern not in filename:
+        self.locationListWidget.clear()
+        for filename_date1, filename_date2 in self.scanAllPairs(dirpath):
+            if pattern and pattern not in filename_date1 and pattern and pattern not in filename_date2:
                 continue
-            label_file = osp.splitext(filename)[0] + '.json'
+            label_file = osp.splitext(filename_date1)[0].split('.')[0] + '.json'
             if self.output_dir:
                 label_file_without_path = osp.basename(label_file)
                 label_file = osp.join(self.output_dir, label_file_without_path)
-            item = QtWidgets.QListWidgetItem(filename)
+            item = QtWidgets.QListWidgetItem(osp.splitext(filename_date1)[0].split('.')[0])
             item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
             if QtCore.QFile.exists(label_file) and \
                     LabelFile.is_label_file(label_file):
                 item.setCheckState(Qt.Checked)
             else:
                 item.setCheckState(Qt.Unchecked)
-            self.filePairListWidget.addItem(item)
+            self.locationListWidget.addItem(item)
         self.openNextPair(load=load)
 
-    def scanAllImages(self, folderPath):
+    def scanAllPairs(self, folderPath):
         extensions = ['.%s' % fmt.data().decode("ascii").lower()
                       for fmt in QtGui.QImageReader.supportedImageFormats()]
-        images = []
-
+        bb_pairs = {}
         for root, dirs, files in os.walk(folderPath):
             for file in files:
                 if file.lower().endswith(tuple(extensions)):
                     relativePath = osp.join(root, file)
-                    images.append(relativePath)
-        images.sort(key=lambda x: x.lower())
-        return images
+                    if file.split('.')[0] not in bb_pairs and ('.d1.' in file or '.d2.' in file):
+                        bb_pairs[file.split('.')[0]] = [relativePath]
+                    elif '.d1.' in file or '.d2.' in file:
+                        bb_pairs[file.split('.')[0]] += [relativePath]
+                        bb_pairs[file.split('.')[0]].sort()
+        pairs = bb_pairs.values()
+        pairs = sorted(pairs, key=lambda item: item[0])
+        return pairs
