@@ -7,12 +7,12 @@ import yaml
 
 from qtpy import QtWidgets
 
-from labelme import __appname__
-from labelme import __version__
-from labelme.app import MainWindow
-from labelme.config import get_config
-from labelme.logger import logger
-from labelme.utils import newIcon
+from labelus import __appname__
+from labelus import __version__
+from labelus.app import MainWindow
+from labelus.config import get_config
+from labelus.logger import logger
+from labelus.utils import newIcon
 
 
 def main():
@@ -38,7 +38,7 @@ def main():
         help='output file or directory (if it ends with .json it is '
              'recognized as file, else as directory)'
     )
-    default_config_file = os.path.join(os.path.expanduser('~'), '.labelmerc')
+    default_config_file = os.path.join(os.path.expanduser('~'), '.labelusrc')
     parser.add_argument(
         '--config',
         dest='config_file',
@@ -145,7 +145,7 @@ def main():
     if not config['labels'] and config['validate_label']:
         logger.error('--labels must be specified with --validatelabel or '
                      'validate_label: true in the config file '
-                     '(ex. ~/.labelmerc).')
+                     '(ex. ~/.labelusrc).')
         sys.exit(1)
 
     output_file = None

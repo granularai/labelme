@@ -6,12 +6,12 @@ block_cipher = None
 
 
 a = Analysis(
-    ['labelme/main.py'],
-    pathex=['labelme'],
+    ['labelus/main.py'],
+    pathex=['labelus'],
     binaries=[],
     datas=[
-        ('labelme/config/default_config.yaml', 'labelme/config'),
-        ('labelme/icons/*', 'labelme/icons'),
+        ('labelus/config/default_config.yaml', 'labelus/config'),
+        ('labelus/icons/*', 'labelus/icons'),
     ],
     hiddenimports=[],
     hookspath=[],
@@ -28,18 +28,18 @@ exe = EXE(
     a.binaries,
     a.zipfiles,
     a.datas,
-    name='labelme',
+    name='labelus',
     debug=False,
     strip=False,
     upx=True,
     runtime_tmpdir=None,
     console=False,
-    icon='labelme/icons/icon.ico',
+    icon='labelus/icons/icon.ico',
 )
 app = BUNDLE(
     exe,
     name='labelus.app',
-    icon='labelme/icons/logo_sm.png',
+    icon='labelus/icons/logo_sm.png',
     bundle_identifier=None,
     info_plist={'NSHighResolutionCapable': 'True'},
 )

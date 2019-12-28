@@ -8,7 +8,7 @@ import sys
 
 import matplotlib.pyplot as plt
 
-from labelme import utils
+from labelus import utils
 
 
 PY2 = sys.version_info[0] == 2

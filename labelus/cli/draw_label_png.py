@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import PIL.Image
 
-from labelme.logger import logger
-from labelme import utils
+from labelus.logger import logger
+from labelus import utils
 
 
 def main():

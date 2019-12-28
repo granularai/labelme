@@ -5,11 +5,11 @@ import os.path as osp
 
 import PIL.Image
 
-from labelme._version import __version__
-from labelme.logger import logger
-from labelme import PY2
-from labelme import QT4
-from labelme import utils
+from labelus._version import __version__
+from labelus.logger import logger
+from labelus import PY2
+from labelus import QT4
+from labelus import utils
 
 
 class LabelFileError(Exception):

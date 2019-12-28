@@ -3,7 +3,7 @@ import os.path as osp
 import numpy as np
 import PIL.Image
 
-from labelme.utils.draw import label_colormap
+from labelus.utils.draw import label_colormap
 
 
 def lblsave(filename, lbl):

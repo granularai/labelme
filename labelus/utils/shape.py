@@ -4,7 +4,7 @@ import numpy as np
 import PIL.Image
 import PIL.ImageDraw
 
-from labelme.logger import logger
+from labelus.logger import logger
 
 
 def polygons_to_mask(img_shape, polygons, shape_type=None):
@@ -75,8 +75,8 @@ def shapes_to_label(img_shape, shapes, label_name_to_value, type='class'):
     return cls
 
 
-def labelme_shapes_to_label(img_shape, shapes):
-    logger.warn('labelme_shapes_to_label is deprecated, so please use '
+def labelus_shapes_to_label(img_shape, shapes):
+    logger.warn('labelus_shapes_to_label is deprecated, so please use '
                 'shapes_to_label.')
 
     label_name_to_value = {'_background_': 0}

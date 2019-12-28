@@ -15,7 +15,7 @@ assert PY3 or PY2
 
 
 here = os.path.abspath(os.path.dirname(__file__))
-version_file = os.path.join(here, 'labelme', '_version.py')
+version_file = os.path.join(here, 'labelus', '_version.py')
 if PY3:
     import importlib
     version = importlib.machinery.SourceFileLoader(
@@ -83,11 +83,11 @@ if sys.argv[1] == 'release':
         sys.exit(1)
 
     commands = [
-        'python tests/docs_tests/man_tests/test_labelme_1.py',
+        'python tests/docs_tests/man_tests/test_labelus_1.py',
         'git tag v{:s}'.format(version),
         'git push origin master --tag',
         'python setup.py sdist',
-        'twine upload dist/labelme-{:s}.tar.gz'.format(version),
+        'twine upload dist/labelus-{:s}.tar.gz'.format(version),
     ]
     for cmd in commands:
         subprocess.check_call(shlex.split(cmd))
@@ -100,25 +100,25 @@ def get_long_description():
     try:
         import github2pypi
         return github2pypi.replace_url(
-            slug='wkentaro/labelme', content=long_description
+            slug='wkentaro/labelus', content=long_description
         )
     except Exception:
         return long_description
 
 
 setup(
-    name='labelme',
+    name='labelus',
     version=version,
     packages=find_packages(),
-    description='Image Polygonal Annotation with Python',
+    description='Image Pair Change Annotation with Python',
     long_description=get_long_description(),
     long_description_content_type='text/markdown',
-    author='Kentaro Wada',
-    author_email='www.kentaro.wada@gmail.com',
-    url='https://github.com/wkentaro/labelme',
+    author='Sagar Verma',
+    author_email='sagar@granular.ai',
+    url='https://github.com/granularai/labelus',
     install_requires=install_requires,
     license='GPLv3',
-    keywords='Image Annotation, Machine Learning',
+    keywords='Image Annotation, Machine Learning, Change Annotation',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
@@ -131,15 +131,15 @@ setup(
         'Programming Language :: Python :: Implementation :: CPython',
         'Programming Language :: Python :: Implementation :: PyPy',
     ],
-    package_data={'labelme': ['icons/*', 'config/*.yaml']},
+    package_data={'labelus': ['icons/*', 'config/*.yaml']},
     entry_points={
         'console_scripts': [
-            'labelme=labelme.main:main',
-            'labelme_draw_json=labelme.cli.draw_json:main',
-            'labelme_draw_label_png=labelme.cli.draw_label_png:main',
-            'labelme_json_to_dataset=labelme.cli.json_to_dataset:main',
-            'labelme_on_docker=labelme.cli.on_docker:main',
+            'labelus=labelus.main:main',
+            'labelus_draw_json=labelus.cli.draw_json:main',
+            'labelus_draw_label_png=labelus.cli.draw_label_png:main',
+            'labelus_json_to_dataset=labelus.cli.json_to_dataset:main',
+            'labelus_on_docker=labelus.cli.on_docker:main',
         ],
     },
-    data_files=[('share/man/man1', ['docs/man/labelme.1'])],
+    data_files=[('share/man/man1', ['docs/man/labelus.1'])],
 )

@@ -3,7 +3,7 @@ import shutil
 
 import yaml
 
-from labelme.logger import logger
+from labelus.logger import logger
 
 
 here = osp.dirname(osp.abspath(__file__))
@@ -32,8 +32,8 @@ def get_default_config():
     with open(config_file) as f:
         config = yaml.safe_load(f)
 
-    # save default config to ~/.labelmerc
-    user_config_file = osp.join(osp.expanduser('~'), '.labelmerc')
+    # save default config to ~/.labelusrc
+    user_config_file = osp.join(osp.expanduser('~'), '.labelusrc')
     if not osp.exists(user_config_file):
         try:
             shutil.copy(config_file, user_config_file)
@@ -59,7 +59,7 @@ def get_config(config_from_args=None, config_file=None):
     # Configuration load order:
     #
     #   1. default config (lowest priority)
-    #   2. config file passed by command line argument or ~/.labelmerc
+    #   2. config file passed by command line argument or ~/.labelusrc
     #   3. command line argument (highest priority)
 
     # 1. default config

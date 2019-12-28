@@ -6,7 +6,7 @@ import sys
 from qtpy import QT_VERSION
 
 
-__appname__ = 'labelme'
+__appname__ = 'labelus'
 
 QT4 = QT_VERSION[0] == '4'
 QT5 = QT_VERSION[0] == '5'
@@ -17,7 +17,7 @@ PY3 = sys.version[0] == '3'
 del sys
 
 
-from labelme._version import __version__
+from labelus._version import __version__
 
-from labelme import testing
-from labelme import utils
+from labelus import testing
+from labelus import utils

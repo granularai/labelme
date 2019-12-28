@@ -1,7 +1,7 @@
 import json
 import os.path as osp
 
-import labelme.utils
+import labelus.utils
 
 
 def assert_labelfile_sanity(filename):
@@ -13,7 +13,7 @@ def assert_labelfile_sanity(filename):
     imageData = data.get('imageData', None)
     if imageData is None:
         assert osp.exists(data['imagePath'])
-    img = labelme.utils.img_b64_to_arr(imageData)
+    img = labelus.utils.img_b64_to_arr(imageData)
 
     H, W = img.shape[:2]
     assert 'shapes' in data

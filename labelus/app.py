@@ -9,25 +9,25 @@ from qtpy.QtCore import Qt
 from qtpy import QtGui
 from qtpy import QtWidgets
 
-from labelme import __appname__
-from labelme import PY2
-from labelme import QT5
+from labelus import __appname__
+from labelus import PY2
+from labelus import QT5
 
 from . import utils
-from labelme.config import get_config
-from labelme.label_file import LabelFile
-from labelme.label_file import LabelFileError
-from labelme.logger import logger
-from labelme.shape import DEFAULT_FILL_COLOR
-from labelme.shape import DEFAULT_LINE_COLOR
-from labelme.shape import Shape
-from labelme.widgets import Canvas
-from labelme.widgets import ColorDialog
-from labelme.widgets import EscapableQListWidget
-from labelme.widgets import LabelDialog
-from labelme.widgets import LabelQListWidget
-from labelme.widgets import ToolBar
-from labelme.widgets import ZoomWidget
+from labelus.config import get_config
+from labelus.label_file import LabelFile
+from labelus.label_file import LabelFileError
+from labelus.logger import logger
+from labelus.shape import DEFAULT_FILL_COLOR
+from labelus.shape import DEFAULT_LINE_COLOR
+from labelus.shape import Shape
+from labelus.widgets import Canvas
+from labelus.widgets import ColorDialog
+from labelus.widgets import EscapableQListWidget
+from labelus.widgets import LabelDialog
+from labelus.widgets import LabelQListWidget
+from labelus.widgets import ToolBar
+from labelus.widgets import ZoomWidget
 
 
 # FIXME
@@ -62,7 +62,7 @@ class MainWindow(QtWidgets.QMainWindow):
             if output_file is None:
                 output_file = output
 
-        # see labelme/config/default_config.yaml for valid configuration
+        # see labelus/config/default_config.yaml for valid configuration
         if config is None:
             config = get_config()
         self._config = config
@@ -752,7 +752,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.actions.undo.setEnabled(self.canvas.isShapeRestorable)
 
     def tutorial(self):
-        url = 'https://github.com/granularai/labelme/tree/labelus/examples/tutorial'  # NOQA
+        url = 'https://github.com/granularai/labelus/tree/labelus/examples/tutorial'  # NOQA
         webbrowser.open(url)
 
     def toggleDrawingSensitive(self, drawing=True):
