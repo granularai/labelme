@@ -55,6 +55,7 @@ class LabelFile(object):
             f.seek(0)
             return f.read()
 
+    @staticmethod
     def load_image_pair(filename_date1, filename_date2):
         try:
             image_date1_pil = PIL.Image.open(filename_date1)
