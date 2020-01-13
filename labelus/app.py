@@ -968,8 +968,8 @@ class MainWindow(QtWidgets.QMainWindow):
             lf.save(
                 filename=filename,
                 shapes=shapes,
-                image_date1Path=image_date1Path,
-                image_date2Path=image_date2Path,
+                image_date1Path=osp.basename(self.image_date1Path),
+                image_date2Path=osp.basename(self.image_date2Path),
                 image_date1Data=image_date1Data,
                 image_date2Data=image_date2Data,
                 imageHeight=self.image_date1.height(),
