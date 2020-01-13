@@ -30,16 +30,6 @@ from labelus.widgets import ToolBar
 from labelus.widgets import ZoomWidget
 
 
-# FIXME
-# - [medium] Set max zoom value to something big enough for FitWidth/Window
-
-# TODO(unknown):
-# - [high] Add polygon movement with arrow keys
-# - [high] Deselect shape when clicking and already selected(?)
-# - [low,maybe] Open images with drag & drop.
-# - [low,maybe] Preview images on file dialogs.
-# - Zoom is too "steppy".
-
 
 class MainWindow(QtWidgets.QMainWindow):
 
@@ -830,22 +820,12 @@ class MainWindow(QtWidgets.QMainWindow):
         current_date1 = self.filename_date1
         current_date2 = self.filename_date2
 
-        # def exists(filename):
-            # return osp.exists(str(filename))
         def exists(filename_date1, filename_date2):
             return osp.exists(str(filename_date1)) and osp.exists(str(filename_date2))
 
-        # menu = self.menus.recentFiles
         menu = self.menus.recentPairs
         menu.clear()
-        # files = [f for f in self.recentFiles if f != current and exists(f)]
         pairs = [f for f in self.recentPairs if f[0] != current_date1 and f[1] != current_date2 and exists(f[0], f[1])]
-        # for i, f in enumerate(files):
-        #     icon = utils.newIcon('labels')
-        #     action = QtWidgets.QAction(
-        #         icon, '&%d %s' % (i + 1, QtCore.QFileInfo(f).fileName()), self)
-        #     action.triggered.connect(functools.partial(self.loadRecent, f))
-        #     menu.addAction(action)
         for i, f in enumerate(pairs):
             icon = utils.newIcon('labels')
             action = QtWidgets.QAction(

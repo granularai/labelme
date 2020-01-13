@@ -11,6 +11,7 @@ from labelus import PY2
 from labelus import QT4
 from labelus import utils
 
+PIL.Image.MAX_IMAGE_PIXELS = None
 
 class LabelFileError(Exception):
     pass
