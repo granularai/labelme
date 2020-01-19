@@ -55,7 +55,7 @@ class Canvas(QtWidgets.QWidget):
         self.prevPoint = QtCore.QPoint()
         self.prevMovePoint = QtCore.QPoint()
         self.offsets = QtCore.QPoint(), QtCore.QPoint()
-        self.scale = 1.0
+        self.scale = 0.1
         self.pixmap = QtGui.QPixmap()
         self.date = None
         self.visible = {}
@@ -487,9 +487,9 @@ class Canvas(QtWidgets.QWidget):
 
         p = self._painter
         p.begin(self)
-        p.setRenderHint(QtGui.QPainter.Antialiasing)
-        p.setRenderHint(QtGui.QPainter.HighQualityAntialiasing)
-        p.setRenderHint(QtGui.QPainter.SmoothPixmapTransform)
+        # p.setRenderHint(QtGui.QPainter.Antialiasing)
+        # p.setRenderHint(QtGui.QPainter.HighQualityAntialiasing)
+        # p.setRenderHint(QtGui.QPainter.SmoothPixmapTransform)
 
         p.scale(self.scale, self.scale)
         p.translate(self.offsetToCenter())

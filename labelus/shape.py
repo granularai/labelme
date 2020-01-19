@@ -33,8 +33,8 @@ class Shape(object):
     vertex_fill_color = DEFAULT_VERTEX_FILL_COLOR
     hvertex_fill_color = DEFAULT_HVERTEX_FILL_COLOR
     point_type = P_ROUND
-    point_size = 8
-    scale = 1.0
+    point_size = 2
+    scale = 0.1
 
     def __init__(self, label=None, line_color=None, shape_type=None,
                  flags=None):
@@ -48,7 +48,7 @@ class Shape(object):
         self._highlightIndex = None
         self._highlightMode = self.NEAR_VERTEX
         self._highlightSettings = {
-            self.NEAR_VERTEX: (4, self.P_ROUND),
+            self.NEAR_VERTEX: (8, self.P_ROUND),
             self.MOVE_VERTEX: (1.5, self.P_SQUARE),
         }
 
